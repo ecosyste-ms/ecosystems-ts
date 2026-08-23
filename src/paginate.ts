@@ -8,8 +8,15 @@ export const DEFAULT_PER_PAGE = 100;
  * Exceeding it throws rather than truncating silently -- a silently short dependency or
  * advisory list is a correctness bug in the caller, not a smaller result. Same decision
  * as ecosystems-go.
+ *
+ * DIVERGENCE FROM ecosystems-go: Go caps at 20 pages (2,000 items), which real
+ * collections exceed -- `/packages/critical` alone is ~96 pages. A ceiling that ordinary
+ * data trips is a functional limit dressed as a safety net, and it fails only after
+ * doing 20 pages of work. This guards the thing that actually warrants a guard -- a
+ * server looping `rel="next"` forever -- and leaves legitimate crawls alone. A call
+ * bounded by `maxItems` is not subject to it at all; see {@link pageBudget}.
  */
-export const DEFAULT_MAX_PAGES = 20;
+export const DEFAULT_MAX_PAGES = 1000;
 
 /**
  * Extracts the `rel="next"` URL from an RFC 8288 `Link` header.
@@ -48,6 +55,27 @@ export function perPageForCap(maxItems: number): number {
   return maxItems > 0 && maxItems < DEFAULT_PER_PAGE ? maxItems : DEFAULT_PER_PAGE;
 }
 
+/**
+ * Pages one call may follow, given what the caller asked for.
+ *
+ * `maxPages` guards *unbounded* calls. A caller who passed `maxItems` has already bounded
+ * the work, so the item cap wins where it is the larger of the two -- asking for 50,000
+ * items should not fail at page 1,000 for a reason the caller never set.
+ *
+ * `perPage` is how many items a page actually holds, not what was requested: an endpoint
+ * that honours `per_page` loosely, or a filtered collection returning half-full pages,
+ * needs proportionally more pages to reach the same cap. Callers that only know the
+ * requested size get the default, and {@link followLinkedPages} re-derives it per page.
+ */
+export function pageBudget(
+  maxItems: number,
+  maxPages: number,
+  perPage: number = DEFAULT_PER_PAGE,
+): number {
+  if (maxItems <= 0) return maxPages;
+  return Math.max(maxPages, Math.ceil(maxItems / perPage));
+}
+
 /** Truncates to `maxItems`; `maxItems <= 0` means unlimited. */
 export function capItems<T>(items: T[], maxItems: number): { items: T[]; capped: boolean } {
   if (maxItems <= 0 || items.length <= maxItems) return { items, capped: false };
@@ -74,6 +102,11 @@ export function nextPageUrl(response: Response): string | null {
   } catch {
     return next;
   }
+}
+
+/** One wording for the ceiling, so every paginating path points at the same lever. */
+export function pageCapMessage(maxPages: number): string {
+  return `pagination exceeded max pages ${maxPages} (raise the client's \`maxPages\` option)`;
 }
 
 export type PageFetcher<T> = (url: string) => Promise<{ data: T[]; response: Response }>;
@@ -103,22 +136,29 @@ export interface FollowOptions<T> {
  */
 export async function followLinkedPages<T>(options: FollowOptions<T>): Promise<T[]> {
   const { first, response, maxItems = 0, maxPages = DEFAULT_MAX_PAGES, getPage } = options;
+  // Recomputed per page rather than assumed: a budget derived from a full page would
+  // still fail short of `maxItems` against an endpoint that returns half-full pages.
+  // Empty pages never extend it -- that is the runaway case `maxPages` exists for.
+  let budget = pageBudget(maxItems, maxPages, first.length || undefined);
 
   let { items: out } = capItems(first, maxItems);
   if (satisfied(out.length, maxItems)) return out;
 
   let next = nextPageUrl(response);
 
-  for (let page = 1; next !== null && page < maxPages; page++) {
+  for (let page = 1; next !== null && page < budget; page++) {
     const result = await getPage(next);
     ({ items: out } = capItems(out.concat(result.data), maxItems));
     if (satisfied(out.length, maxItems)) return out;
 
+    if (result.data.length > 0) {
+      budget = Math.max(budget, pageBudget(maxItems, maxPages, result.data.length));
+    }
     next = nextPageUrl(result.response);
   }
 
   if (next !== null) {
-    throw new EcosystemsError(`pagination exceeded max pages ${maxPages}`, { url: next });
+    throw new EcosystemsError(pageCapMessage(budget), { url: next });
   }
 
   return out;
@@ -145,6 +185,6 @@ export async function* paginateLinked<T>(
   }
 
   if (next !== null) {
-    throw new EcosystemsError(`pagination exceeded max pages ${maxPages}`, { url: next });
+    throw new EcosystemsError(pageCapMessage(maxPages), { url: next });
   }
 }

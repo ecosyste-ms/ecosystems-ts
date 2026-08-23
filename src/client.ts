@@ -12,6 +12,7 @@ import {
   DEFAULT_MAX_PAGES,
   DEFAULT_PER_PAGE,
   followLinkedPages,
+  pageCapMessage,
   paginateLinked,
   perPageForCap,
 } from "./paginate.js";
@@ -446,6 +447,35 @@ export class EcosystemsClient {
   }
 
   /**
+   * Gets just the version numbers of a package -- one unpaginated request.
+   *
+   * Prefer this over {@link getAllVersions} when the numbers are all you need: that one
+   * returns full {@link T.Version} objects and pages, which over a whole-registry crawl is
+   * a large multiple of the bytes for fields the caller discards.
+   *
+   * An unknown package yields `[]`, as with every list wrapper here.
+   */
+  getVersionNumbers(
+    registry: string,
+    name: string,
+    options: RequestOptions = {},
+  ): Promise<string[]> {
+    const what = "get version numbers";
+    return this.#call(what, async () =>
+      this.#list(
+        what,
+        await this.packages.GET(
+          "/registries/{registryName}/packages/{packageName}/version_numbers",
+          {
+            signal: options.signal,
+            params: { path: { registryName: registry, packageName: name } },
+          },
+        ),
+      ),
+    );
+  }
+
+  /**
    * Gets every version of a package.
    *
    * DIVERGENCE FROM ecosystems-go: Go's `GetAllVersions` pages until a short page with no
@@ -478,7 +508,7 @@ export class EcosystemsClient {
       if (batch.length < DEFAULT_PER_PAGE) return all;
     }
 
-    throw new EcosystemsError(`pagination exceeded max pages ${this.#maxPages}`);
+    throw new EcosystemsError(pageCapMessage(this.#maxPages));
   }
 
   /** Returns packages that depend on `registry`/`name`. Follows `Link` pagination. */
@@ -501,6 +531,28 @@ export class EcosystemsClient {
             },
           },
         ),
+      maxItems,
+      options.signal,
+    );
+  }
+
+  /**
+   * Lists critical packages across every registry. Follows `Link` pagination.
+   *
+   * ~9,600 packages as of 2026-08-23, so an uncapped call is ~96 requests. Not to be
+   * confused with `/critical` (`getCriticalPackages`), a different endpoint.
+   */
+  listCriticalPackages(
+    maxItems = 0,
+    options: RequestOptions = {},
+  ): Promise<T.PackageWithRegistry[]> {
+    return this.#collection(
+      "list critical packages",
+      (init) =>
+        this.packages.GET("/packages/critical", {
+          ...init,
+          params: { query: { per_page: perPageForCap(maxItems) } },
+        }),
       maxItems,
       options.signal,
     );

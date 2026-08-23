@@ -25,6 +25,7 @@ export {
   DEFAULT_PER_PAGE,
   followLinkedPages,
   nextLink,
+  pageBudget,
   paginateLinked,
   perPageForCap,
 } from "./paginate.js";

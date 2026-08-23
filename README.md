@@ -53,6 +53,12 @@ console.log(`rake 13.0.0 integrity: ${version?.integrity}`);
 // Get all versions
 const versions = await client.getAllVersions("rubygems.org", "rake");
 console.log(`rake has ${versions.length} versions`);
+
+// Get just the version numbers - one request, no Version objects
+const numbers = await client.getVersionNumbers("rubygems.org", "rake");
+
+// Every critical package across all registries (~9,600 today, ~96 requests)
+const critical = await client.listCriticalPackages();
 ```
 
 `lookup` is the single-package counterpart to `bulkLookup`: same PURL vocabulary, one
@@ -115,8 +121,14 @@ const dependents = await client.getDependentPackages("rubygems.org", "rails", 30
 ```
 
 List methods follow `Link: rel="next"` pagination and stop at the requested item cap when
-one is provided. Without a cap they stop at 20 pages and **throw** rather than silently
-returning a short list.
+one is provided. Reaching the page ceiling **throws** rather than silently returning a
+short list.
+
+That ceiling (`maxPages`, default 1000) exists to stop a server looping `rel="next"`
+forever, not to bound result size - whole-collection crawls like `listCriticalPackages()`
+are expected to run to hundreds of pages. A call given an explicit item cap is not subject
+to it: the cap already bounds the work, so `getDependentPackages(reg, name, 500_000)` will
+not fail at page 1000 for a limit it never set.
 
 Those methods hold every page in memory. To stream instead, `client.paginate` yields one
 page at a time and stops fetching the moment you stop consuming:
@@ -146,7 +158,7 @@ const client = new EcosystemsClient({
   apiKey: "your-api-key",        // Authorization: Bearer - see Rate limits below
   batchSize: 50,                 // PURLs per bulk lookup request (max 100)
   timeoutMs: 30_000,             // deadline per HTTP request, including its retries
-  maxPages: 20,                  // page ceiling for any one paginating call
+  maxPages: 1000,                // runaway-pagination guard; see Pagination below
   retry: { attempts: 3 },        // or `false` to disable
   fetch: myFetch,                // custom fetch (proxies, agents, tests)
   servers: {                     // per-service base URL overrides; any of

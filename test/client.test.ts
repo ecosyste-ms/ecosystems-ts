@@ -406,10 +406,11 @@ describe("Link pagination", () => {
       });
     });
 
-    const client = makeClient(url);
+    // maxPages explicitly, so the test does not ride whatever the default happens to be.
+    const client = makeClient(url, { maxPages: 4 });
     await expect(
       client.lookupPackagesByRepositoryUrl("https://github.com/acme/widget", 0),
-    ).rejects.toThrow(/pagination exceeded max pages/);
+    ).rejects.toThrow(/pagination exceeded max pages 4/);
   });
 
   // Port of TestGetDependentPackagesFollowsLink -- note the bare `rel=next`.
@@ -767,5 +768,119 @@ describe("looksLikeNetworkError", () => {
     const err = new TypeError("something odd");
     (err as { cause?: unknown }).cause = { code: "ECONNRESET" };
     expect(looksLikeNetworkError(err)).toBe(true);
+  });
+});
+
+describe("listCriticalPackages", () => {
+  it("follows Link pagination across pages", async () => {
+    const seen: string[] = [];
+    const url = await serve((req, res) => {
+      const page = Number(query(req).get("page") ?? "1");
+      seen.push(`${pathname(req)}?page=${page}`);
+      const link: Record<string, string> =
+        page < 3
+          ? {
+              link: `<http://${req.headers.host}/packages/critical?page=${page + 1}>; rel="next"`,
+            }
+          : {};
+      writeJSON(
+        res,
+        `[{"name":"p${page}","ecosystem":"npm","registry":{"name":"npmjs.org"}}]`,
+        200,
+        link,
+      );
+    });
+
+    const client = makeClient(url);
+    const packages = await client.listCriticalPackages();
+
+    expect(packages.map((p) => p.name)).toEqual(["p1", "p2", "p3"]);
+    expect(seen).toEqual([
+      "/packages/critical?page=1",
+      "/packages/critical?page=2",
+      "/packages/critical?page=3",
+    ]);
+  });
+
+  it("crawls past the page ceiling when maxItems asks for it", async () => {
+    // ~96 pages today and growing; a bounded caller must not hit a ceiling it never set.
+    let pages = 0;
+    const url = await serve((req, res) => {
+      pages++;
+      const batch = Array.from(
+        { length: 100 },
+        (_v, i) => `{"name":"p${pages}-${i}","ecosystem":"npm"}`,
+      );
+      writeJSON(res, `[${batch.join(",")}]`, 200, {
+        link: `<http://${req.headers.host}/packages/critical?page=${pages + 1}>; rel="next"`,
+      });
+    });
+
+    const client = makeClient(url, { maxPages: 2 });
+    const packages = await client.listCriticalPackages(250);
+
+    expect(packages).toHaveLength(250);
+    expect(pages).toBe(3);
+  });
+
+  it("keeps going for a bounded call when pages come back short", async () => {
+    // per_page is a request, not a promise; a budget assuming full pages would cut this
+    // off at one page and report a ceiling the caller never set.
+    let pages = 0;
+    const url = await serve((req, res) => {
+      pages++;
+      writeJSON(res, `[{"name":"p${pages}","ecosystem":"npm"}]`, 200, {
+        link: `<http://${req.headers.host}/packages/critical?page=${pages + 1}>; rel="next"`,
+      });
+    });
+
+    const client = makeClient(url, { maxPages: 2 });
+    await expect(client.listCriticalPackages(5)).resolves.toHaveLength(5);
+    expect(pages).toBe(5);
+  });
+
+  it("stops at the requested item cap", async () => {
+    const url = await serve((req, res) => {
+      expect(query(req).get("per_page")).toBe("2");
+      writeJSON(res, `[{"name":"a","ecosystem":"npm"},{"name":"b","ecosystem":"npm"}]`, 200, {
+        link: `<http://${req.headers.host}/packages/critical?page=2>; rel="next"`,
+      });
+    });
+
+    const client = makeClient(url);
+    await expect(client.listCriticalPackages(2)).resolves.toHaveLength(2);
+  });
+});
+
+describe("getVersionNumbers", () => {
+  it("returns the unpaginated string array", async () => {
+    let requests = 0;
+    const url = await serve((req, res) => {
+      requests++;
+      expect(pathname(req)).toBe("/registries/rubygems.org/packages/rake/version_numbers");
+      // A Link header here must not trigger a second request: this endpoint is not paged.
+      writeJSON(res, `["13.0.0","13.0.1"]`, 200, {
+        link: `<http://${req.headers.host}/x?page=2>; rel="next"`,
+      });
+    });
+
+    const client = makeClient(url);
+    await expect(client.getVersionNumbers("rubygems.org", "rake")).resolves.toEqual([
+      "13.0.0",
+      "13.0.1",
+    ]);
+    expect(requests).toBe(1);
+  });
+
+  it("returns an empty list for an unknown package", async () => {
+    const client = makeClient(await serveStatus(404));
+    await expect(client.getVersionNumbers("rubygems.org", "nope")).resolves.toEqual([]);
+  });
+
+  it("throws on a server error", async () => {
+    const client = makeClient(await serveStatus(500), { retry: false });
+    await expect(client.getVersionNumbers("rubygems.org", "rake")).rejects.toBeInstanceOf(
+      EcosystemsError,
+    );
   });
 });
