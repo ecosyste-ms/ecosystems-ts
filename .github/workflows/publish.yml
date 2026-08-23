@@ -7,6 +7,9 @@ on:
   push:
     tags:
       - 'v*'
+  # Manual runs publish whatever version the selected ref has in package.json;
+  # npm rejects a version that is already published, so a stale ref fails loudly.
+  workflow_dispatch:
 
 permissions:
   contents: read
