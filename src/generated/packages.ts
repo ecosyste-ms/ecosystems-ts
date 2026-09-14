@@ -79,7 +79,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** lookup a package by repository URL, purl or ecosystem+name */
+        /** lookup a single package by repository URL, purl or ecosystem+name. For multiple packages use POST /packages/bulk_lookup. */
         get: operations["lookupPackage"];
         put?: never;
         post?: never;
@@ -1026,7 +1026,7 @@ export interface operations {
             query?: {
                 /** @description repository URL */
                 repository_url?: string;
-                /** @description package URL */
+                /** @description single package URL. For multiple purls use POST /packages/bulk_lookup. */
                 purl?: string;
                 /** @description ecosystem name */
                 ecosystem?: string;
@@ -1251,7 +1251,7 @@ export interface operations {
             query?: {
                 /** @description repository URL */
                 repository_url?: string;
-                /** @description package URL */
+                /** @description single package URL. For multiple purls use POST /packages/bulk_lookup. */
                 purl?: string;
                 /** @description ecosystem name */
                 ecosystem?: string;
