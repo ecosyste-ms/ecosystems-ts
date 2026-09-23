@@ -1052,6 +1052,13 @@ export interface operations {
                     "application/json": components["schemas"]["PackageWithRegistry"][];
                 };
             };
+            /** @description missing repository_url, purl or name parameter */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     getCriticalPackagesList: {
