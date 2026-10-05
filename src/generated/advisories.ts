@@ -211,9 +211,9 @@ export interface operations {
                 created_after?: string;
                 /** @description filter by updated_at after given time */
                 updated_after?: string;
-                /** @description field to order results by */
+                /** @description Comma-separated advisory column names to sort by. Defaults to published_at. Unknown columns return 400. */
                 sort?: string;
-                /** @description direction to order results by */
+                /** @description Comma-separated asc or desc directions corresponding to sort fields, case-insensitive. Missing directions default to desc. Invalid or extra directions return 400. */
                 order?: string;
             };
             header?: never;
@@ -229,6 +229,17 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Advisory"][];
+                };
+            };
+            /** @description Invalid sort column or order direction */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error?: string;
+                    };
                 };
             };
         };
