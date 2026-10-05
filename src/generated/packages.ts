@@ -1921,6 +1921,8 @@ export interface operations {
                 per_page?: number;
                 /** @description ecosystem name */
                 ecosystem?: string;
+                /** @description id of the version that declares the dependencies */
+                version_id?: number;
                 /** @description package name */
                 package_name?: string;
                 /** @description package id */
