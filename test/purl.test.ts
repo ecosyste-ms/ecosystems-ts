@@ -33,6 +33,7 @@ describe("purlToRegistry", () => {
     ["docker", "hub.docker.com"],
     ["brew", "formulae.brew.sh"],
     ["julia", "juliahub.com"],
+    ["huggingface", "huggingface.co"],
   ];
 
   it.each(cases)("%s -> %s", (type, want) => {
@@ -47,7 +48,6 @@ describe("purlToRegistry", () => {
       "rpm",
       "bitbucket",
       "bitnami",
-      "huggingface",
       // Named registries that do not exist; absent from GET /registries.
       "alpm",
       "chef",

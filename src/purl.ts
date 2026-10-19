@@ -56,7 +56,6 @@ export const PURL_TYPES_WITHOUT_REGISTRY: readonly string[] = [
   "chocolatey",
   "generic",
   "github",
-  "huggingface",
   "oci",
   "rpm",
 ];
