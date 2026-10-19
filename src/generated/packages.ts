@@ -657,6 +657,7 @@ export interface components {
             version_url: string;
             codemeta_url: string;
             related_tag: Record<string, never>;
+            advisories: components["schemas"]["VersionAdvisory"][];
         };
         VersionWithDependencies: {
             id?: number;
@@ -680,6 +681,7 @@ export interface components {
             related_tag: Record<string, never>;
             latest: boolean;
             dependencies: components["schemas"]["Dependency"][];
+            advisories: components["schemas"]["VersionAdvisory"][];
         };
         VersionLookup: components["schemas"]["VersionWithDependencies"] & {
             package: components["schemas"]["PackageWithRegistry"];
@@ -705,6 +707,17 @@ export interface components {
             version_url: string;
             codemeta_url: string;
             package_url: string;
+            advisories: components["schemas"]["VersionAdvisory"][];
+        };
+        VersionAdvisory: {
+            uuid?: string | null;
+            identifiers: string[];
+            url?: string | null;
+            title?: string | null;
+            severity?: string | null;
+            affected: boolean;
+            fixed: boolean;
+            fixed_versions: string[];
         };
         Dependency: {
             id: number;

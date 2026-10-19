@@ -199,6 +199,8 @@ export interface operations {
                 package_name?: string;
                 /** @description Severity to filter by */
                 severity?: string;
+                /** @description Return advisories whose affected ranges match this version. Requires ecosystem and package_name. Advisories without a matching range are excluded. */
+                version?: string;
                 /** @description Repository URL to filter by */
                 repository_url?: string;
                 /** @description Source to filter by (e.g. github, erlef, cpansa) */
@@ -231,7 +233,7 @@ export interface operations {
                     "application/json": components["schemas"]["Advisory"][];
                 };
             };
-            /** @description Invalid sort column or order direction */
+            /** @description Invalid version filter, sort column or order direction */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -268,7 +270,7 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description Package URL (PURL) to lookup advisories for. Format: pkg:type/namespace/name@version
+                 * @description Package URL (PURL) to lookup advisories for. Format: pkg:type/namespace/name@version. When a version is provided, only advisories with a matching affected range are returned.
                  * @example pkg:npm/lodash@4.17.20
                  */
                 purl?: string;
