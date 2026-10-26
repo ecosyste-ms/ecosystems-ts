@@ -72,6 +72,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/purls/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** lookup a package version by PURL */
+        get: operations["lookupPurl"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/purls/bulk_lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** lookup package versions by PURL */
+        post: operations["bulkLookupPurls"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/packages/lookup": {
         parameters: {
             query?: never;
@@ -597,6 +631,8 @@ export interface components {
             /** Format: date-time */
             latest_release_published_at: string | null;
             latest_release_number: string | null;
+            /** @description Newest published release number, including deprecated or unlisted versions. Null when the package has no versions. Differs from latest_release_number when every version is deprecated or unlisted. */
+            latest_published_release_number: string | null;
             /** Format: date-time */
             last_synced_at: string | null;
             /** Format: date-time */
@@ -685,6 +721,28 @@ export interface components {
         };
         VersionLookup: components["schemas"]["VersionWithDependencies"] & {
             package: components["schemas"]["PackageWithRegistry"];
+        };
+        PurlLookupResult: {
+            purl: string;
+            /** @enum {string} */
+            match_status: "matched" | "missing" | "ambiguous";
+            version?: components["schemas"]["PurlVersion"];
+        };
+        PurlVersion: {
+            name: string;
+            version: string;
+            purl: string;
+            license_expression?: string | null;
+            identifiers: {
+                purl?: string;
+                integrity?: string;
+            };
+            artifacts: {
+                download_url?: string;
+                integrity?: string;
+            }[];
+            dependencies: components["schemas"]["Dependency"][];
+            advisories: components["schemas"]["VersionAdvisory"][];
         };
         VersionWithPackage: {
             id: number;
@@ -1026,6 +1084,70 @@ export interface operations {
                 };
             };
             /** @description missing integrity parameter */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    lookupPurl: {
+        parameters: {
+            query: {
+                /** @description package URL, with an optional version */
+                purl: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description successful operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurlLookupResult"];
+                };
+            };
+            /** @description missing PURL parameter */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    bulkLookupPurls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description package URLs to lookup (maximum 100) */
+                    purls: string[];
+                };
+            };
+        };
+        responses: {
+            /** @description successful operation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PurlLookupResult"][];
+                };
+            };
+            /** @description missing PURLs parameter or too many PURLs */
             400: {
                 headers: {
                     [name: string]: unknown;
