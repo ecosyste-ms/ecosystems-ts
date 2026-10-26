@@ -1,15 +1,15 @@
 {
-  "fetchedAt": "2026-10-19T13:45:29.921Z",
+  "fetchedAt": "2026-10-26T11:50:07.384Z",
   "specs": {
     "packages": {
       "url": "https://raw.githubusercontent.com/ecosyste-ms/packages/main/openapi/api/v1/openapi.yaml",
-      "sha256": "8ab05a729410c915245312f6f217ae319d5c7605fa23ae06548482b4d4020ca8",
-      "bytes": 71139
+      "sha256": "b8fcfcb601918bb0b2bd7018e7a8b900e0ef6104f280d859ef3dfb0b016ae053",
+      "bytes": 74442
     },
     "repos": {
       "url": "https://raw.githubusercontent.com/ecosyste-ms/repos/main/openapi/api/v1/openapi.yaml",
-      "sha256": "791f49c6a3cc7ad51e0ff3e897662c8d515f40b0ba26fd612c33ae7e32710664",
-      "bytes": 39167
+      "sha256": "50276688eb63673f6b7b7225d8187c03067a81824527ca536d18b3c26dc9a88b",
+      "bytes": 39931
     },
     "advisories": {
       "url": "https://raw.githubusercontent.com/ecosyste-ms/advisories/main/openapi/api/v1/openapi.yaml",
