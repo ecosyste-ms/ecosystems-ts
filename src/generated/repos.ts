@@ -531,6 +531,8 @@ export interface components {
             pull_requests_enabled?: boolean;
             icon_url?: string;
             metadata?: Record<string, never>;
+            /** @description Only included in single repository responses (getHostRepository, repositoriesLookup). */
+            funding_links?: string[];
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -603,6 +605,8 @@ export interface components {
             purl?: string;
             tag_url?: string;
             manifests_url?: string;
+            /** @description API URL of the release attached to this tag (null if the tag has no release) */
+            release_url?: string | null;
         };
         Ecosystem: {
             name?: string;
@@ -674,6 +678,14 @@ export interface components {
             last_synced_at?: string;
             tag_url?: string;
             html_url?: string;
+            /** @description The tag this release is attached to (null if the tag has not been synced) */
+            tag?: {
+                name?: string;
+                sha?: string;
+                kind?: string;
+                /** Format: date-time */
+                published_at?: string;
+            } | null;
         };
         Scorecard: {
             id?: number;

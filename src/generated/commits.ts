@@ -160,6 +160,8 @@ export interface components {
             /** Format: date-time */
             last_synced_at?: string;
             last_synced_commit?: string;
+            /** @description Null when stats are current. too_large, not_found or invalid when sync is skipped and stats are not updated. */
+            status?: string | null;
             /** Format: date-time */
             updated_at?: string;
             /** Format: date-time */
