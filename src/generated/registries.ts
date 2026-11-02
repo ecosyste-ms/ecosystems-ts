@@ -50,7 +50,6 @@ export const DEFAULT_REGISTRY_BY_PURL_TYPE: Readonly<Record<string, string>> = {
   octave: "packages.octave.org",
   opam: "opam.ocaml.org",
   openbsd: "openbsd-7.9-amd64",
-  openvsx: "open-vsx.org",
   pkgsrc: "pkgsrc-netbsd-x86_64-10.1-all",
   pub: "pub.dev",
   puppet: "forge.puppet.com",
@@ -61,6 +60,7 @@ export const DEFAULT_REGISTRY_BY_PURL_TYPE: Readonly<Record<string, string>> = {
   terraform: "registry.terraform.io",
   ubuntu: "ubuntu-24.04",
   vcpkg: "vcpkg.io",
+  "vscode-extension": "open-vsx.org",
 };
 
 /**
